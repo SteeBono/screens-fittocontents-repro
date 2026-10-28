@@ -1,0 +1,35 @@
+diff --git a/node_modules/react-native-screens/ios/RNSScreen.mm b/node_modules/react-native-screens/ios/RNSScreen.mm
+index 049fd22..8c9b333 100644
+--- a/node_modules/react-native-screens/ios/RNSScreen.mm
++++ b/node_modules/react-native-screens/ios/RNSScreen.mm
+@@ -517,8 +517,7 @@ - (void)contentWrapper:(RNSScreenContentWrapper *)contentWrapper receivedReactFr
+ 
+     if (_sheetAllowedDetents.count > 0 && _sheetAllowedDetents[0].intValue == SHEET_FIT_TO_CONTENTS) {
+       _sheetContentHeight = reactFrame.size.height;
+-      auto detents = [self detentsFromMaxHeights:@[ [NSNumber numberWithFloat:reactFrame.size.height +
+-                                                              _contentWrapperBox.contentHeightErrata] ]];
++      auto detents = [self detentsFromContentHeight:reactFrame.size.height + _contentWrapperBox.contentHeightErrata];
+       [self setAllowedDetentsForSheet:sheetController to:detents animate:YES];
+     }
+   }
+@@ -1117,6 +1116,20 @@ - (void)updateFormSheetPresentationStyle
+                  }];
+ }
+ 
++/// `fitToContents`: UIKit adds the bottom safe area to custom detent values, while the content height already
++/// includes whatever bottom inset the content applies. Subtract it, so the sheet is exactly as tall as its content.
++- (NSArray<UISheetPresentationControllerDetent *> *)detentsFromContentHeight:(CGFloat)contentHeight
++    API_AVAILABLE(ios(16.0))
++{
++  __weak RNSScreenView *weakSelf = self;
++  return [self
++      detentsFromValues:@[ @(contentHeight) ]
++           withResolver:^CGFloat(id<UISheetPresentationControllerDetentResolutionContext> ctx, NSNumber *height) {
++             CGFloat bottomInset = weakSelf.window.safeAreaInsets.bottom;
++             return MIN(ctx.maximumDetentValue, MAX(0, height.floatValue - bottomInset));
++           }];
++}
++
+ #endif // Check for iOS >= 16
+ 
+ #endif // !TARGET_OS_TV && !TARGET_OS_VISION
